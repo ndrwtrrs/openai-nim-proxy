@@ -243,3 +243,51 @@ app.listen(PORT, () => {
   console.log(`Reasoning display: ${SHOW_REASONING ? 'ENABLED' : 'DISABLED'}`);
   console.log(`Thinking mode: ${ENABLE_THINKING_MODE ? 'ENABLED' : 'DISABLED'}`);
 });
+
+Railway deployment failed — Build Error
+
+Add a package.json file to the repository root to fix this build failure. Railpack could not detect the project as Node.js because there is no package.json, only README.md and server.js. Without package.json, Railpack cannot identify the language, install dependencies (express, cors, axios), or determine a start command.
+
+Repository: https://github.com/ndrwtrrs/openai-nim-proxy
+Branch: main · Commit: 57b3b74 — Create server.js
+Deployment ID: 2fc6a035-a59f-46f1-af5c-7bd548087c25
+Service ID: b0a6634d-37fa-4db2-b051-04e34734cee3
+Environment ID: 189c581d-6db6-448f-a165-c0821c97fd51
+
+---
+
+## Problem
+The Railpack builder (v0.27.0) cannot detect the project type because the repository only contains README.md and server.js with no package.json. Build logs show: "Railpack could not determine how to build the app." The build fails at the BUILD_IMAGE stage within 1 second.
+
+The server.js file requires three npm packages:
+```js
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+```
+Without package.json, Railpack cannot identify this as a Node.js project, cannot install dependencies, and cannot determine a start command.
+
+## Diagnosis
+Railpack detects Node.js projects by the presence of package.json in the repo root (or rootDirectory). No package.json exists anywhere in this repository. The build logs confirm Railpack analyzed the repo contents and found only README.md and server.js, matching no supported language provider.
+
+## Fix
+1. **Create** `package.json` in the repo root (no rootDirectory is set)
+2. **Current content:** File does not exist
+3. **New content:**
+```json
+{
+  "name": "openai-nim-proxy",
+  "version": "1.0.0",
+  "description": "OpenAI to NVIDIA NIM API Proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "axios": "^1.7.0"
+  }
+}
+```
+4. **Why this fixes the issue:** Adding package.json allows Railpack to detect the project as Node.js, install the three required dependencies (express, cors, axios), and auto-detect the start command from scripts.start. The app already correctly binds to process.env.PORT || 3000, so it will work on Railway without further configuration.
